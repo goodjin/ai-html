@@ -5,8 +5,12 @@ const textInput = document.querySelector('#text-input');
 const speakBtn = document.querySelector('#speak-btn');
 const recordBtn = document.querySelector('#record-btn');
 const stopBtn = document.querySelector('#stop-btn');
+const logSection = document.querySelector('#log-section');
 const logContainer = document.querySelector('#log-container');
 const clearLogsBtn = document.querySelector('#clear-logs-btn');
+const copyLogsBtn = document.querySelector('#copy-logs-btn');
+const toggleLogsBtn = document.querySelector('#toggle-logs-btn');
+const showLogsBtn = document.querySelector('#show-logs-btn');
 
 // Mode Switcher
 const localModeBtn = document.querySelector('#local-mode-btn');
@@ -454,6 +458,12 @@ async function handleApiError(response) {
 
 // --- Common UI Helpers ---
 function addLog(title, content, type = 'info', extraClass = '') {
+    // Auto-show log section on error
+    if (type === 'error') {
+        logSection.classList.remove('hidden');
+        showLogsBtn.parentElement.classList.add('hidden');
+    }
+
     // Remove placeholder if it exists
     const placeholder = logContainer.querySelector('.log-placeholder');
     if (placeholder) placeholder.remove();
@@ -478,6 +488,36 @@ function addLog(title, content, type = 'info', extraClass = '') {
 
 clearLogsBtn.addEventListener('click', () => {
     logContainer.innerHTML = '<div class="log-placeholder">日志已清空</div>';
+});
+
+copyLogsBtn.addEventListener('click', () => {
+    const logs = Array.from(logContainer.querySelectorAll('.log-item')).map(item => {
+        const time = item.querySelector('.log-time').textContent;
+        const title = item.querySelector('.log-title').textContent;
+        const content = item.querySelector('.log-content').textContent;
+        return `${time} ${title}\n${content}\n${'-'.repeat(20)}`;
+    }).reverse().join('\n');
+    
+    if (!logs || logs.includes('日志已清空')) return alert('没有可复制的日志');
+
+    navigator.clipboard.writeText(logs).then(() => {
+        const originalText = copyLogsBtn.textContent;
+        copyLogsBtn.textContent = '已复制！';
+        setTimeout(() => copyLogsBtn.textContent = originalText, 2000);
+    }).catch(err => {
+        console.error('复制失败:', err);
+        alert('复制失败，请手动选择复制');
+    });
+});
+
+toggleLogsBtn.addEventListener('click', () => {
+    logSection.classList.add('hidden');
+    showLogsBtn.parentElement.classList.remove('hidden');
+});
+
+showLogsBtn.addEventListener('click', () => {
+    logSection.classList.remove('hidden');
+    showLogsBtn.parentElement.classList.add('hidden');
 });
 
 function setLoadingUI(text) {

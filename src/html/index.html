@@ -79,16 +79,24 @@
             </div>
         </main>
 
-        <section class="log-section">
+        <section id="log-section" class="log-section hidden">
             <div class="log-header">
                 <h3>调试日志</h3>
-                <button id="clear-logs-btn">清除日志</button>
+                <div class="log-actions">
+                    <button id="copy-logs-btn">复制日志</button>
+                    <button id="clear-logs-btn">清除</button>
+                    <button id="toggle-logs-btn">收起</button>
+                </div>
             </div>
             <div id="log-container" class="log-container">
                 <!-- 日志条目将在这里动态插入 -->
                 <div class="log-placeholder">等待请求发起...</div>
             </div>
         </section>
+
+        <div class="footer-actions">
+            <button id="show-logs-btn" class="text-btn">显示调试日志</button>
+        </div>
 
         <footer>
             <p>基于 Web Speech API 构建</p>
