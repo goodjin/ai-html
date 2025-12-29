@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 语音转换器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI 语音转换器</h1>
+            <p>输入文字，点击按钮即可听到自然的声音</p>
+        </header>
+
+        <main>
+            <div class="mode-selector">
+                <button id="local-mode-btn" class="mode-btn">浏览器内置 (本地)</button>
+                <button id="cloud-mode-btn" class="mode-btn active">云端接口 (API)</button>
+            </div>
+
+            <div class="input-group">
+                <textarea id="text-input" placeholder="请在这里输入您想转换成语音的文字..."></textarea>
+            </div>
+
+            <!-- 本地控制面板 -->
+            <div id="local-controls" class="controls">
+                <div class="control-item">
+                    <label for="voice-select">选择声音：</label>
+                    <select id="voice-select"></select>
+                </div>
+
+                <div class="control-item">
+                    <label for="rate">语速：<span id="rate-value">1</span>x</label>
+                    <input type="range" id="rate" min="0.5" max="2" value="1" step="0.1">
+                </div>
+
+                <div class="control-item">
+                    <label for="pitch">音调：<span id="pitch-value">1</span></label>
+                    <input type="range" id="pitch" min="0" max="2" value="1" step="0.1">
+                </div>
+            </div>
+
+            <!-- 云端控制面板 -->
+            <div id="cloud-controls" class="controls hidden">
+                <div class="control-item full-width">
+                    <label for="api-provider">服务商预设:</label>
+                    <select id="api-provider">
+                        <option value="custom">自定义 (OpenAI 兼容)</option>
+                        <option value="zhipu">智谱 AI (BigModel)</option>
+                        <option value="minimax">MiniMax (推荐)</option>
+                        <option value="openai">OpenAI</option>
+                    </select>
+                </div>
+                <div class="control-item full-width">
+                    <label for="api-base-url">Base URL:</label>
+                    <input type="text" id="api-base-url" placeholder="https://api.openai.com/v1">
+                </div>
+                <div class="control-item full-width">
+                    <label for="api-key">API Key:</label>
+                    <input type="password" id="api-key" placeholder="输入您的 API Key">
+                </div>
+                <div class="control-item">
+                    <label for="cloud-model">模型名称:</label>
+                    <input type="text" id="cloud-model" value="tts-1" placeholder="tts-1">
+                </div>
+                <div class="control-item">
+                    <label for="cloud-voice">发音人:</label>
+                    <select id="cloud-voice">
+                        <!-- 动态加载 -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="speak-btn" class="primary-btn">立即播放</button>
+                <button id="record-btn" class="secondary-btn hidden">语音转文字</button>
+                <button id="stop-btn" class="secondary-btn">停止播放</button>
+            </div>
+        </main>
+
+        <footer>
+            <p>基于 Web Speech API 构建</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
