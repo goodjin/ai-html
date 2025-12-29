@@ -267,7 +267,7 @@ async function transcribeAudio(blob) {
         if (!response.ok) throw await handleApiError(response);
 
         const result = await response.json();
-        addLog('响应成功 (ASR)', result, 'success', 'response');
+        addLog('响应成功 (ASR)', `数据大小: ${JSON.stringify(result).length} 字节`, 'success', 'response');
 
         if (result.text) {
             textInput.value = result.text;
@@ -377,7 +377,7 @@ async function speakCloud() {
             if (!response.ok) throw await handleApiError(response);
             
             const result = await response.json();
-            addLog('响应成功 (GLM-4-Voice)', result, 'success', 'response');
+            addLog('响应成功 (GLM-4-Voice)', `数据大小: ${JSON.stringify(result).length} 字节`, 'success', 'response');
 
             const base64Audio = result.choices[0].message.audio?.data;
             if (!base64Audio) throw new Error('未返回音频数据');
@@ -423,9 +423,8 @@ async function speakCloud() {
 
             if (!response.ok) throw await handleApiError(response);
             
-            addLog('响应成功 (MiniMax Binary Audio)', 'Audio binary received', 'success', 'response');
-            
             const blob = await response.blob();
+            addLog('响应成功 (MiniMax Binary Audio)', `数据大小: ${blob.size} 字节`, 'success', 'response');
             audioData = await blob.arrayBuffer();
         } else {
             // Standard OpenAI-compatible TTS
@@ -449,25 +448,34 @@ async function speakCloud() {
 
             if (!response.ok) throw await handleApiError(response);
             
-            addLog('响应成功 (TTS Binary Audio)', 'Audio binary received', 'success', 'response');
-            
             const blob = await response.blob();
+            addLog('响应成功 (TTS Binary Audio)', `数据大小: ${blob.size} 字节`, 'success', 'response');
             audioData = await blob.arrayBuffer();
         }
         
         if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioBuffer = await audioContext.decodeAudioData(audioData);
         
-        if (currentSource) {
-            try { currentSource.stop(); } catch(e) {}
+        try {
+            const audioBuffer = await audioContext.decodeAudioData(audioData);
+            
+            if (currentSource) {
+                try { currentSource.stop(); } catch(e) {}
+            }
+            currentSource = audioContext.createBufferSource();
+            currentSource.buffer = audioBuffer;
+            currentSource.connect(audioContext.destination);
+            
+            currentSource.onended = () => resetUI();
+            currentSource.start(0);
+            setLoadingUI('正在播放...');
+        } catch (decodeError) {
+            console.error('Audio decode error:', decodeError);
+            // Log the first few bytes of audioData for debugging
+            const bytes = new Uint8Array(audioData.slice(0, 16));
+            const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
+            addLog('音频解码失败', `错误: ${decodeError.message}\n音频头信息 (Hex): ${hex}\n这通常是因为 API 返回了错误信息而非音频文件。`, 'error');
+            throw new Error(`音频解码失败: ${decodeError.message}`);
         }
-        currentSource = audioContext.createBufferSource();
-        currentSource.buffer = audioBuffer;
-        currentSource.connect(audioContext.destination);
-        
-        currentSource.onended = () => resetUI();
-        currentSource.start(0);
-        setLoadingUI('正在播放...');
 
     } catch (error) {
         console.error(error);
