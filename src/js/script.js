@@ -52,7 +52,7 @@ const CLOUD_CONFIGS = {
         ]
     },
     minimax: {
-        baseUrl: 'https://api.minimaxi.com/v1',
+        baseUrl: 'https://api.minimax.chat/v1',
         model: 'speech-01',
         voices: [
             { id: 'male-qn-qingse', name: '青涩青年 (MiniMax)' },
@@ -102,10 +102,13 @@ function loadConfig() {
             apiProviderSelect.value = config.provider || 'minimax';
             updateCloudUI(); // Fill default values first
             
-            // Override with saved values, but for minimax/openai, we prefer the new default baseUrl if it's the old one
+            // Override with saved values
             if (config.baseUrl) {
-                const isOldMinimax = config.provider === 'minimax' && config.baseUrl.includes('minimax.chat');
-                if (!isOldMinimax) {
+                // Migration: if saved baseUrl is the incorrect 'minimaxi.com', update to correct one
+                const isWrongMinimax = config.provider === 'minimax' && config.baseUrl.includes('minimaxi.com');
+                if (isWrongMinimax) {
+                    apiBaseUrlInput.value = CLOUD_CONFIGS.minimax.baseUrl;
+                } else {
                     apiBaseUrlInput.value = config.baseUrl;
                 }
             }
