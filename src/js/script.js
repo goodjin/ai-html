@@ -52,7 +52,7 @@ const CLOUD_CONFIGS = {
         ]
     },
     minimax: {
-        baseUrl: 'https://api.minimax.chat/v1',
+        baseUrl: 'https://api.minimaxi.com/v1',
         model: 'speech-01',
         voices: [
             { id: 'male-qn-qingse', name: '青涩青年 (MiniMax)' },
@@ -104,13 +104,7 @@ function loadConfig() {
             
             // Override with saved values
             if (config.baseUrl) {
-                // Migration: if saved baseUrl is the incorrect 'minimaxi.com', update to correct one
-                const isWrongMinimax = config.provider === 'minimax' && config.baseUrl.includes('minimaxi.com');
-                if (isWrongMinimax) {
-                    apiBaseUrlInput.value = CLOUD_CONFIGS.minimax.baseUrl;
-                } else {
-                    apiBaseUrlInput.value = config.baseUrl;
-                }
+                apiBaseUrlInput.value = config.baseUrl;
             }
             if (config.apiKey) apiKeyInput.value = config.apiKey;
             if (config.model) cloudModelInput.value = config.model;
@@ -259,9 +253,10 @@ async function transcribeAudio(blob) {
         formData.append('file', blob, 'recording.wav');
         formData.append('model', 'glm-asr-2512');
 
-        addLog(`请求 ASR (${baseUrl}/audio/transcriptions)`, { model: 'glm-asr-2512', file: 'recording.wav' }, 'info', 'request');
+        const fullUrl = getApiUrl(baseUrl, '/audio/transcriptions');
+        addLog(`请求 ASR (${fullUrl})`, { model: 'glm-asr-2512', file: 'recording.wav' }, 'info', 'request');
 
-        const response = await fetch(`${baseUrl}/audio/transcriptions`, {
+        const response = await fetch(fullUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`
@@ -367,9 +362,10 @@ async function speakCloud() {
                 }]
             };
             
-            addLog(`请求 GLM-4-Voice (${baseUrl}/chat/completions)`, requestBody, 'info', 'request');
+            const fullUrl = getApiUrl(baseUrl, '/chat/completions');
+            addLog(`请求 GLM-4-Voice (${fullUrl})`, requestBody, 'info', 'request');
 
-            const response = await fetch(`${baseUrl}/chat/completions`, {
+            const response = await fetch(fullUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
@@ -402,9 +398,10 @@ async function speakCloud() {
                 voice: voice
             };
             
-            addLog(`请求 TTS (${baseUrl}/audio/speech)`, requestBody, 'info', 'request');
+            const fullUrl = getApiUrl(baseUrl, '/audio/speech');
+            addLog(`请求 TTS (${fullUrl})`, requestBody, 'info', 'request');
 
-            const response = await fetch(`${baseUrl}/audio/speech`, {
+            const response = await fetch(fullUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
@@ -460,6 +457,19 @@ async function handleApiError(response) {
 }
 
 // --- Common UI Helpers ---
+function getApiUrl(baseUrl, path) {
+    baseUrl = baseUrl.trim();
+    if (!baseUrl) return "";
+    
+    // If baseUrl already ends with the path, use it as is
+    if (baseUrl.endsWith(path)) {
+        return baseUrl;
+    }
+    
+    // Ensure baseUrl doesn't end with a slash before appending path
+    return baseUrl.replace(/\/+$/, "") + path;
+}
+
 function addLog(title, content, type = 'info', extraClass = '') {
     // Auto-show log section on error
     if (type === 'error') {
