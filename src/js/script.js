@@ -390,6 +390,43 @@ async function speakCloud() {
                 bytes[i] = binaryString.charCodeAt(i);
             }
             audioData = bytes.buffer;
+        } else if (provider === 'minimax') {
+            // MiniMax Native T2A V2 logic (since they don't support OpenAI /audio/speech standard)
+            const requestBody = {
+                model: model,
+                text: text,
+                stream: false,
+                voice_setting: {
+                    voice_id: voice,
+                    speed: 1.0,
+                    vol: 1.0,
+                    pitch: 0
+                },
+                audio_setting: {
+                    sample_rate: 32000,
+                    bitrate: 128000,
+                    format: "mp3"
+                }
+            };
+            
+            const fullUrl = getApiUrl(baseUrl, '/t2a_v2');
+            addLog(`请求 MiniMax Native T2A (${fullUrl})`, requestBody, 'info', 'request');
+
+            const response = await fetch(fullUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) throw await handleApiError(response);
+            
+            addLog('响应成功 (MiniMax Binary Audio)', 'Audio binary received', 'success', 'response');
+            
+            const blob = await response.blob();
+            audioData = await blob.arrayBuffer();
         } else {
             // Standard OpenAI-compatible TTS
             const requestBody = {
