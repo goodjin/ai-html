@@ -5,6 +5,8 @@ const textInput = document.querySelector('#text-input');
 const speakBtn = document.querySelector('#speak-btn');
 const recordBtn = document.querySelector('#record-btn');
 const stopBtn = document.querySelector('#stop-btn');
+const logContainer = document.querySelector('#log-container');
+const clearLogsBtn = document.querySelector('#clear-logs-btn');
 
 // Mode Switcher
 const localModeBtn = document.querySelector('#local-mode-btn');
@@ -250,6 +252,8 @@ async function transcribeAudio(blob) {
         formData.append('file', blob, 'recording.wav');
         formData.append('model', 'glm-asr-2512');
 
+        addLog(`请求 ASR (${baseUrl}/audio/transcriptions)`, { model: 'glm-asr-2512', file: 'recording.wav' }, 'info', 'request');
+
         const response = await fetch(`${baseUrl}/audio/transcriptions`, {
             method: 'POST',
             headers: {
@@ -261,6 +265,8 @@ async function transcribeAudio(blob) {
         if (!response.ok) throw await handleApiError(response);
 
         const result = await response.json();
+        addLog('响应成功 (ASR)', result, 'success', 'response');
+
         if (result.text) {
             textInput.value = result.text;
         } else {
@@ -344,29 +350,32 @@ async function speakCloud() {
         
         // Handle GLM-4-Voice specially as it uses chat completions endpoint
         if (provider === 'zhipu' && model === 'glm-4-voice') {
+            const requestBody = {
+                model: model,
+                messages: [{
+                    role: "user",
+                    content: [
+                        { type: "text", text: text }
+                    ]
+                }]
+            };
+            
+            addLog(`请求 GLM-4-Voice (${baseUrl}/chat/completions)`, requestBody, 'info', 'request');
+
             const response = await fetch(`${baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    model: model,
-                    messages: [{
-                        role: "user",
-                        content: [
-                            { type: "text", text: text }
-                        ]
-                    }],
-                    // For GLM-4-Voice, it will automatically generate audio if the model is set correctly
-                    // and we might need to specify the output format if the API requires it.
-                    // Based on docs, just calling it with the model name works.
-                })
+                body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) throw await handleApiError(response);
             
             const result = await response.json();
+            addLog('响应成功 (GLM-4-Voice)', result, 'success', 'response');
+
             const base64Audio = result.choices[0].message.audio?.data;
             if (!base64Audio) throw new Error('未返回音频数据');
             
@@ -380,20 +389,26 @@ async function speakCloud() {
             audioData = bytes.buffer;
         } else {
             // Standard OpenAI-compatible TTS
+            const requestBody = {
+                model: model,
+                input: text,
+                voice: voice
+            };
+            
+            addLog(`请求 TTS (${baseUrl}/audio/speech)`, requestBody, 'info', 'request');
+
             const response = await fetch(`${baseUrl}/audio/speech`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    model: model,
-                    input: text,
-                    voice: voice
-                })
+                body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) throw await handleApiError(response);
+            
+            addLog('响应成功 (TTS Binary Audio)', 'Audio binary received', 'success', 'response');
             
             const blob = await response.blob();
             audioData = await blob.arrayBuffer();
@@ -422,18 +437,49 @@ async function speakCloud() {
 
 async function handleApiError(response) {
     let errorMessage = `请求失败 (${response.status})`;
+    let errorDetail = null;
     try {
         const clonedResponse = response.clone();
-        const errorData = await clonedResponse.json();
-        errorMessage = errorData.error?.message || errorData.message || errorMessage;
+        errorDetail = await clonedResponse.json();
+        errorMessage = errorDetail.error?.message || errorDetail.message || errorMessage;
     } catch (e) {
         const textError = await response.text();
+        errorDetail = textError;
         errorMessage = textError.length > 100 ? textError.substring(0, 100) + '...' : (textError || errorMessage);
     }
+    
+    addLog(`API 错误 (${response.status})`, errorDetail || errorMessage, 'error');
     return new Error(errorMessage);
 }
 
 // --- Common UI Helpers ---
+function addLog(title, content, type = 'info', extraClass = '') {
+    // Remove placeholder if it exists
+    const placeholder = logContainer.querySelector('.log-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const logItem = document.createElement('div');
+    logItem.className = `log-item ${type} ${extraClass}`;
+    
+    const time = new Date().toLocaleTimeString();
+    
+    // Obfuscate API key in logs for safety
+    let displayContent = typeof content === 'object' ? JSON.stringify(content, null, 2) : content;
+    displayContent = displayContent.replace(/Bearer [a-zA-Z0-9._-]+/g, 'Bearer ******');
+
+    logItem.innerHTML = `
+        <div class="log-time">[${time}]</div>
+        <div class="log-title">${title}</div>
+        <div class="log-content">${displayContent}</div>
+    `;
+    
+    logContainer.prepend(logItem); // Show newest logs at top
+}
+
+clearLogsBtn.addEventListener('click', () => {
+    logContainer.innerHTML = '<div class="log-placeholder">日志已清空</div>';
+});
+
 function setLoadingUI(text) {
     speakBtn.disabled = true;
     speakBtn.textContent = text;
